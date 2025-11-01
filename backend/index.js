@@ -28,6 +28,7 @@ const workerManagementRoute = require("./routes/workerManagement.route");
 const userIDVerificationRoute = require("./routes/userIDVerification.route");
 const messageRoute = require("./routes/message.route");
 const dashboardRoutes = require("./routes/dashboard.route");
+const archivedRoutes = require("./routes/archived.route");
 
 // Hiring system routes
 const applicationRoute = require("./routes/jobApplication.route");
@@ -112,6 +113,7 @@ app.use("/contracts", contractRoute);
 
 // Admin management routes
 app.use("/job-management", jobManagementRoute);
+app.use("/archived", archivedRoutes);
 
 // =====================
 // Serve SPA in production (optional)

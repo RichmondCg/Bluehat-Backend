@@ -231,7 +231,36 @@ const Sidebar = () => {
                       >
                         <path d="M6 2a2 2 0 0 0-2 2v16l8-4 8 4V4a2 2 0 0 0-2-2H6Z" />
                       </svg>
-                      <span>Pending Jobs</span>
+                      <span>Job Management</span>
+                    </Link>
+                  </li>
+
+                  {/* Archive Jobs */}
+                  <li>
+                    <Link
+                      to="/archived-jobs"
+                      className="flex items-center gap-2 p-2 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+                    >
+                      <svg
+                        className="w-5 h-5 text-gray-500"
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="gray"
+                        stroke="gray"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        class="lucide lucide-archive-restore-icon lucide-archive-restore"
+                      >
+                        <rect width="20" height="5" x="2" y="3" rx="1" />
+                        <path d="M4 8v11a2 2 0 0 0 2 2h2" />
+                        <path d="M20 8v11a2 2 0 0 1-2 2h-2" />
+                        <path d="m9 15 3-3 3 3" />
+                        <path d="M12 12v9" />
+                      </svg>
+                      <span>Archived Jobs</span>
                     </Link>
                   </li>
                 </ul>

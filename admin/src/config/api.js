@@ -34,6 +34,7 @@ const API_CONFIG = {
     skills: "/skills",
     jobs: "/jobs",
     jobManagement: "/job-management",
+    archived: "/archived",
   },
 
   // Get full API URL for specific service
