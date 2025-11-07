@@ -104,9 +104,9 @@ const getArchivedJobs = async (req, res) => {
       clientId,
     } = sanitizedQuery;
 
-    // Build filter - only show deleted jobs
+    // ✅ Build filter - only show deleted jobs
     const filter = {
-      isDeleted: true,
+      isDeleted: true, // ← this ensures only archived jobs appear
     };
 
     if (category) filter.category = category;
@@ -126,6 +126,7 @@ const getArchivedJobs = async (req, res) => {
 
     const sortOrder = order === "asc" ? 1 : -1;
 
+    // ✅ Query only archived (soft deleted) jobs
     const jobs = await Job.find(filter)
       .populate({
         path: "clientId",
@@ -143,7 +144,7 @@ const getArchivedJobs = async (req, res) => {
       .limit(limit)
       .lean();
 
-    // ✅ Filter for valid clients
+    // ✅ Filter for valid clients only (skip broken refs)
     const validJobs = jobs.filter((job) => job.clientId);
 
     if (!validJobs || validJobs.length === 0) {
@@ -178,12 +179,12 @@ const getArchivedJobs = async (req, res) => {
       });
     }
 
-    // ✅ Get total count
+    // ✅ Get total count for pagination
     const totalCount = await Job.countDocuments(filter);
 
     const processingTime = Date.now() - startTime;
 
-    // ✅ Format jobs
+    // ✅ Format and clean up job data
     const optimizedJobs = validJobs.map((job) => ({
       id: job._id,
       description: job.description,
@@ -214,6 +215,7 @@ const getArchivedJobs = async (req, res) => {
         : null,
     }));
 
+    // ✅ Logging success
     logger.info("Archived jobs retrieved successfully", {
       totalJobs: validJobs.length,
       totalCount,
@@ -226,12 +228,14 @@ const getArchivedJobs = async (req, res) => {
       timestamp: new Date().toISOString(),
     });
 
+    // ✅ Set headers for cache and total count
     res.set({
       "Cache-Control": "public, max-age=300",
       ETag: `"archived-jobs-${Date.now()}"`,
       "X-Total-Count": totalCount.toString(),
     });
 
+    // ✅ Send final response
     res.status(200).json({
       success: true,
       message: "Archived jobs retrieved successfully",
