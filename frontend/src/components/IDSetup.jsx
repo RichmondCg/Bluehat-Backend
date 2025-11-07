@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { X, Upload, CheckCircle, AlertCircle, Info, Loader2 } from "lucide-react";
 import {
   uploadIDPicture,
@@ -21,13 +22,19 @@ const IDSetup = ({ onClose }) => {
   const [idUploaded, setIdUploaded] = useState(false);
   const [selfieUploaded, setSelfieUploaded] = useState(false);
 
+  // Camera state for selfie capture
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
+  const selfieInputRef = useRef(null);
+  const [cameraActive, setCameraActive] = useState(false);
+  const [cameraError, setCameraError] = useState("");
+
   useEffect(() => {
     getProfile()
       .then((res) => {
         setCurrentUser(res.data.data);
       })
-      .catch(() => setCurrentUser(null))
-      .finally(() => setLoading(false));
+      .catch(() => setCurrentUser(null));
   }, []);
 
   useEffect(() => {
@@ -60,10 +67,118 @@ const IDSetup = ({ onClose }) => {
     reader.readAsDataURL(file);
   };
 
+  const startCamera = async () => {
+    try {
+      setCameraError("");
+
+      // Secure context is required except on localhost
+      if (!window.isSecureContext) {
+        setCameraError(
+          "Camera requires a secure context. Open the app on https:// or use http://localhost during development."
+        );
+        setCameraActive(false);
+        return;
+      }
+
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setCameraError(
+          "Your browser doesn't support camera access. Try the latest Chrome/Edge/Safari or upload a photo instead."
+        );
+        setCameraActive(false);
+        return;
+      }
+
+      const constraints = {
+        video: { facingMode: { ideal: "user" } },
+        audio: false,
+      };
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+      setCameraActive(true);
+    } catch (err) {
+      console.error("Unable to access camera:", err);
+      const name = err?.name || "";
+      let msg = "Unable to access camera. Please allow camera permission.";
+      if (name === "NotAllowedError" || name === "PermissionDeniedError") {
+        msg =
+          "Camera permission was blocked. Click the lock icon in your browser's address bar and allow Camera access for this site, then retry.";
+      } else if (name === "NotFoundError" || name === "DevicesNotFoundError") {
+        msg = "No camera device found. Connect a camera or upload a selfie instead.";
+      } else if (name === "NotReadableError") {
+        msg = "Camera is in use by another app. Close other apps using the camera and try again.";
+      } else if (name === "OverconstrainedError") {
+        msg = "This device can't satisfy the requested camera settings. Try again or upload a selfie.";
+      } else if (name === "SecurityError") {
+        msg = "Camera access is blocked by your browser or OS security settings. Allow access and retry.";
+      }
+      setCameraError(msg);
+      setCameraActive(false);
+    }
+  };
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+    setCameraActive(false);
+  };
+
+  const captureSelfie = () => {
+    const video = videoRef.current;
+    if (!video) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) return;
+        const url = URL.createObjectURL(blob);
+        // Store as File so backend receives filename/type
+        const file = new File([blob], "selfie.jpg", { type: "image/jpeg" });
+        setSelfieFile(file);
+        // Revoke previous preview if any
+        if (selfiePreview) URL.revokeObjectURL(selfiePreview);
+        setSelfiePreview(url);
+        stopCamera();
+      },
+      "image/jpeg",
+      0.9
+    );
+  };
+
+  const handleSelfieFilePick = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      if (selfiePreview) URL.revokeObjectURL(selfiePreview);
+    } catch {}
+    const url = URL.createObjectURL(file);
+    setSelfieFile(file);
+    setSelfiePreview(url);
+    setCameraError("");
+    setCameraActive(false);
+  };
+
+  // Cleanup object URLs and stop camera on unmount
+  useEffect(() => {
+    return () => {
+      stopCamera();
+      if (selfiePreview) URL.revokeObjectURL(selfiePreview);
+      if (idPreview) URL.revokeObjectURL(idPreview);
+    };
+  }, [selfiePreview, idPreview]);
+
   const handleUpload = async (type) => {
     const userId = currentUser?.id;
     if (!userId) {
-      // alert("User ID is missing. Please log in again.");
       return;
     }
 
@@ -81,8 +196,7 @@ const IDSetup = ({ onClose }) => {
       const statusRes = await getVerificationStatus(userId);
       setStatus(statusRes.data || statusRes);
     } catch (err) {
-      console.error("Upload failed:", err.response?.data || err.message);
-      // alert(err.response?.data?.message || "Upload failed. Please try again.");
+  console.error("Upload failed:", err.response?.data || err.message);
     } finally {
       setIdLoading(false);
       setSelfieLoading(false);
@@ -90,9 +204,9 @@ const IDSetup = ({ onClose }) => {
   };
 
 
-  return (
-    <div className="fixed inset-0 bg-white/20 backdrop-blur-md bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl shadow-lg w-full max-w-lg relative max-h-[90vh] overflow-y-auto p-6">
+  return createPortal(
+    <div className="fixed inset-0 bg-white/20 backdrop-blur-md bg-opacity-50 flex items-center justify-center z-[2000]" role="dialog" aria-modal="true">
+      <div className="bg-white rounded-2xl shadow-lg w-full max-w-lg relative max-h-[90vh] overflow-y-auto p-6 mx-4">
 
         {/* Close Button */}
         <button
@@ -157,28 +271,93 @@ const IDSetup = ({ onClose }) => {
 
         </div>
 
-        {/* Selfie Upload */}
+        {/* Selfie Capture (Camera only, no file upload) */}
         <div className="mb-8">
           <label className="block text-sm font-semibold text-gray-700 mb-2">
-            Step 2: Upload Selfie
+            Step 2: Take or Upload Selfie
           </label>
-          <label className="border-2 border-dashed border-gray-300 rounded-full w-40 h-40 mx-auto flex items-center justify-center bg-gray-50 hover:bg-gray-100 transition cursor-pointer overflow-hidden">
-            {selfiePreview ? (
+          <div className="border-2 border-dashed border-gray-300 rounded-full w-40 h-40 mx-auto flex items-center justify-center bg-gray-50 overflow-hidden relative">
+            {cameraActive ? (
+              <video
+                ref={videoRef}
+                autoPlay
+                muted
+                playsInline
+                className="object-cover w-full h-full"
+              />
+            ) : selfiePreview ? (
               <img src={selfiePreview} alt="Selfie Preview" className="object-cover w-full h-full" />
             ) : (
               <div className="flex flex-col items-center justify-center text-center">
                 <Upload className="w-6 h-6 text-gray-500 mb-2" />
-                <p className="text-xs text-gray-500">Upload or take a selfie</p>
+                <p className="text-xs text-gray-500">Take a selfie or for testing (upload from device)</p>
               </div>
             )}
-            <input
-              type="file"
-              accept="image/*"
-              capture="user"
-              onChange={(e) => handleFileSelect(e, "selfie")}
-              className="hidden"
-            />
-          </label>
+          </div>
+          {cameraError && (
+            <p className="text-red-500 text-xs text-center mt-2">{cameraError}</p>
+          )}
+          <div className="mt-3 flex items-center justify-center gap-2">
+            {!cameraActive && !selfiePreview && (
+              <button
+                type="button"
+                onClick={startCamera}
+                className="px-4 py-2 bg-[#55b3f3] text-white text-sm rounded-md hover:bg-sky-600 cursor-pointer"
+              >
+                Open Camera
+              </button>
+            )}
+            {cameraActive && (
+              <>
+                <button
+                  type="button"
+                  onClick={captureSelfie}
+                  className="px-4 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 cursor-pointer"
+                >
+                  Take Selfie
+                </button>
+                <button
+                  type="button"
+                  onClick={stopCamera}
+                  className="px-4 py-2 bg-gray-200 text-gray-700 text-sm rounded-md hover:bg-gray-300 cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </>
+            )}
+            {!cameraActive && selfiePreview && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (selfiePreview) URL.revokeObjectURL(selfiePreview);
+                  setSelfiePreview(null);
+                  setSelfieFile(null);
+                  startCamera();
+                }}
+                className="px-4 py-2 bg-gray-200 text-gray-700 text-sm rounded-md hover:bg-gray-300 cursor-pointer"
+              >
+                Retake
+              </button>
+            )}
+            {!cameraActive && (
+              <button
+                type="button"
+                onClick={() => selfieInputRef.current?.click()}
+                className="px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm rounded-md hover:bg-gray-50 cursor-pointer"
+              >
+                Upload from device
+              </button>
+            )}
+          </div>
+          {/* Hidden file input for selfie fallback */}
+          <input
+            ref={selfieInputRef}
+            type="file"
+            accept="image/*"
+            capture="user"
+            onChange={handleSelfieFilePick}
+            className="hidden"
+          />
           <button
             onClick={() => handleUpload("selfie")}
             disabled={!selfieFile || selfieLoading || selfieUploaded}
@@ -201,7 +380,8 @@ const IDSetup = ({ onClose }) => {
         </div>
 
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

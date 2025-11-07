@@ -82,7 +82,6 @@ const ProfilePage = () => {
     getProfile()
       .then((res) => {
         setCurrentUser(res.data.data);
-        console.log(res.data.data);
         setLoading(false);
       })
       .catch(() => {
@@ -205,7 +204,6 @@ const ProfilePage = () => {
   };
 
   const handleDeletePortfolio = async (id) => {
-    console.log("Deleting portfolio ID:", id);
     try {
       await deletePortfolio(id);
       setCurrentUser((prev) => ({
@@ -221,7 +219,6 @@ const ProfilePage = () => {
   };
 
   const handleDeleteCertificate = async (id) => {
-    console.log("Deleting certificate ID:", id);
     try {
       await deleteCertificate(id);
       setCurrentUser((prev) => ({
@@ -237,7 +234,6 @@ const ProfilePage = () => {
   };
 
   const handleDeleteExperience = async (id) => {
-    console.log("Deleting experience ID:", id);
     try {
       await deleteExperience(id);
       setCurrentUser((prev) => ({
@@ -262,7 +258,6 @@ const ProfilePage = () => {
   };
 
   const handleDeleteEducation = async (id) => {
-    console.log("Deleting education ID:", id);
     try {
       await deleteEducation(id);
       setCurrentUser((prev) => ({
@@ -278,7 +273,6 @@ const ProfilePage = () => {
   };
 
   const handleDeleteSkillCategory = async (id) => {
-    console.log("Deleting skill category ID:", id);
     try {
       await removeSkillCategory(id);
       setCurrentUser((prev) => ({
@@ -413,7 +407,7 @@ const ProfilePage = () => {
           <button
             type="button"
             aria-label="Edit profile photo"
-            className="absolute top-0 right-0 z-10 p-1 rounded-full shadow hover:bg-gray-50 cursor-pointer"
+            className="absolute top-0 right-0 z-0 p-1 rounded-full shadow hover:bg-gray-50 cursor-pointer"
             onClick={() => setIsModalOpen(true)}
           >
             <Pencil size={14} className="text-gray-400" />
@@ -439,7 +433,7 @@ const ProfilePage = () => {
               <button
                 type="button"
                 aria-label="Edit biography"
-                className="absolute top-[-1px] right-[-1px] md:top-[-8px] md:right-[-10px] z-10 p-1 rounded-full bg-white cursor-pointer shadow hover:bg-gray-50"
+                className="absolute bottom-2 right-2 z-0 p-1 rounded-full bg-white cursor-pointer shadow hover:bg-gray-50"
                 onClick={() => setIsBioModalOpen(true)}
               >
                 <Pencil size={14} className="text-gray-400" />
@@ -560,7 +554,7 @@ const ProfilePage = () => {
 
           {/* Edit Job Modal */}
           {isEditModalOpen && selectedJob && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[2000]">
               <div className="bg-white p-6 rounded-2xl shadow-xl w-[90%] max-w-lg">
                 <h3 className="text-lg font-semibold mb-4 text-gray-700">
                   Edit Job
@@ -613,7 +607,7 @@ const ProfilePage = () => {
 
           {/* ✅ Delete Confirmation */}
           {isDeleteConfirmOpen && jobToDelete && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[2000]">
               <div className="bg-white p-6 rounded-2xl shadow-xl w-[90%] max-w-md text-center">
                 <h3 className="text-lg font-semibold mb-2 text-gray-700">
                   Confirm Delete
@@ -650,7 +644,7 @@ const ProfilePage = () => {
 
           {/* ✅ Update Confirmation */}
           {isUpdateConfirmOpen && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[2000]">
               <div className="bg-white p-6 rounded-2xl shadow-xl w-[90%] max-w-md text-center">
                 <h3 className="text-lg font-semibold mb-2 text-gray-700">
                   Confirm Update
@@ -740,7 +734,7 @@ const ProfilePage = () => {
                 ))}
               </div>
             ) : (
-              <p className="text-gray-500">No skills added yet.</p>
+              <p className="text-gray-500 text-left">No skills added yet.</p>
             )}
 
             {/* AddSkill Modal */}
@@ -814,7 +808,7 @@ const ProfilePage = () => {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-gray-500">No work experience added yet.</p>
+                  <p className="text-gray-500 text-left">No work experience added yet.</p>
                 )}
               </div>
 
@@ -880,7 +874,7 @@ const ProfilePage = () => {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-gray-500">No education added yet.</p>
+                  <p className="text-gray-500 text-left">No education added yet.</p>
                 )}
               </div>
             </div>
@@ -976,7 +970,7 @@ const ProfilePage = () => {
                   ))}
                 </div>
               ) : (
-                <p className="text-gray-500">
+                <p className="text-gray-500 text-left">
                   You have not added any portfolio projects yet.
                 </p>
               )}
@@ -1047,7 +1041,7 @@ const ProfilePage = () => {
                   ))}
                 </div>
               ) : (
-                <p className="text-gray-500">No certificates uploaded yet.</p>
+                <p className="text-gray-500 text-left">No certificates uploaded yet.</p>
               )}
             </div>
 
@@ -1094,7 +1088,7 @@ const ProfilePage = () => {
 
       {/* Modal for profile picture */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[2000]">
           <div className="bg-white rounded-2xl p-6 w-96 relative shadow-lg">
             <button
               className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 cursor-pointer"

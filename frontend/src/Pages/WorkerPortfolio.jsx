@@ -201,11 +201,6 @@ const WorkerPortfolio = () => {
     }
 
     const fetchIds = Array.from(idsToFetch);
-    if (fetchIds.length) {
-      console.log("[WorkerPortfolio] Enriching job details for reviews", {
-        fetchIds,
-      });
-    }
     if (!fetchIds.length) return;
 
     let cancelled = false;
@@ -217,10 +212,7 @@ const WorkerPortfolio = () => {
             const payload = resp?.data || resp;
             const jobData =
               payload?.data?.job || payload?.data || payload?.job || payload;
-            console.log("[WorkerPortfolio] Job fetched for review", {
-              jobId: jid,
-              job: jobData,
-            });
+            // Debug log removed
             return [jid, jobData];
           } catch (err) {
             console.warn("[WorkerPortfolio] Failed to fetch job for review", {
@@ -654,7 +646,7 @@ const WorkerPortfolio = () => {
 
       {/* Quick Invite Modal: Create Job Send Invitation */}
       {showInviteModal && (
-        <div className="fixed inset-0 bg-white/60 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-white/60 flex items-center justify-center z-[2000] p-4">
           <div className="bg-white rounded-xl p-6 w-full max-w-xl shadow-lg border border-gray-200 relative">
             <button
               type="button"
@@ -920,7 +912,7 @@ const WorkerPortfolio = () => {
 
       {/* Feedback overlay */}
       {inviteFeedback.show && (
-        <div className="fixed inset-0 bg-white/60 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-white/60 flex items-center justify-center z-[2000]">
           <div className="bg-white rounded-xl shadow-xl p-6 border border-gray-200 max-w-sm w-full text-center">
             <div className="flex flex-col items-center gap-3">
               {/* <CheckCircle className="w-10 h-10 text-[#55b3f3]" /> */}

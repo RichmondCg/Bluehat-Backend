@@ -28,7 +28,7 @@ const WorkerQuestion = () => {
     const handleSubmit = () => {
         setLoading(true);
         setTimeout(() => {
-            alert("Form Submitted!");
+            console.info("Form Submitted");
             navigate("/find-work");
         }, 2000); // 2 second delay for loading screen
     };
@@ -163,7 +163,7 @@ const WorkerQuestion = () => {
                     </div>
                 </div>
                 {loading && (
-                    <div className="fixed inset-0 bg-[#f4f6f6] bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="fixed inset-0 bg-[#f4f6f6] bg-opacity-50 flex items-center justify-center z-[2000]">
                         <div className="bg-white p-6 rounded-xl shadow-xl text-center">
                             <h3 className="text-xl font-semibold mb-2">Verification Process</h3>
                             <p>Your information is being verified.</p>

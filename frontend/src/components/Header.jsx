@@ -1,6 +1,7 @@
 import { useRef } from "react";
 import { Bell, Mail, X } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { createPortal } from "react-dom";
 import { useState, useEffect } from "react";
 import logo from "../assets/BlueHat_logo.png";
 import profile from "../assets/client.png";
@@ -31,6 +32,7 @@ const Header = () => {
   const [bellUnread, setBellUnread] = useState(0);
   const [bellItems, setBellItems] = useState([]); // {id, text, link, ts}
   const [showAllBell, setShowAllBell] = useState(false);
+  const [logoutError, setLogoutError] = useState("");
 
 
   const handleNotificationClick = () => {
@@ -163,6 +165,40 @@ const Header = () => {
               // Contracts
               s.on("contract:created", () => pushBell("A new contract has been created", "/contracts"));
 
+              // Map contract status updates to concise bell messages
+              const contractUpdateText = (payload) => {
+                const role = (user?.userType || "").toLowerCase();
+                const status = String(payload?.status || "").toLowerCase();
+                switch (status) {
+                  case "active":
+                    return "Contract is now active";
+                  case "in_progress":
+                    return role === "client"
+                      ? "Worker started your contract"
+                      : "Work started on your contract";
+                  case "awaiting_client_confirmation":
+                    return role === "client"
+                      ? "Worker requested completion review required"
+                      : "Waiting for client confirmation";
+                  case "completed":
+                    return "Contract completed";
+                  case "cancelled":
+                    return "Contract cancelled";
+                  default:
+                    return "Contract updated";
+                }
+              };
+
+              s.on("contract:updated", (payload) => {
+                pushBell(contractUpdateText(payload), "/contracts");
+              });
+
+              s.on("contract:review_submitted", (payload) => {
+                const r = (payload?.reviewerType || "").toLowerCase();
+                const who = r === "client" ? "Client" : r === "worker" ? "Worker" : "Someone";
+                pushBell(`${who} submitted a contract review`, "/contracts");
+              });
+
               // Optional: handle cleanup on reconnects
               s.on("disconnect", () => {
                 // keep unread count; connection will auto-retry
@@ -252,14 +288,14 @@ const Header = () => {
       setShowDropdown(false);
       navigate("/home");
     } catch (err) {
-      alert("Logout failed");
+      setLogoutError(err?.response?.data?.message || "Logout failed");
     }
   };
 
 
   if (authLoading) {
     return (
-      <header className="w-full fixed top-0 left-0 z-20 bg-[#f4f6f6] h-[80px]">
+      <header className="w-full fixed top-0 left-0 z-10 bg-[#f4f6f6] h-[80px]">
 
       </header>
     );
@@ -268,7 +304,7 @@ const Header = () => {
 
   return (
 
-    <header className="w-full z-20 top-0 start-0 pt-4 fixed top-0 bg-[#f4f6f6]">
+  <header className="w-full fixed top-0 left-0 z-10 bg-[#f4f6f6] pt-4">
       <div className="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto pt-4 p-2">
         <Link
           to={user ? "/find-work" : "/home"}
@@ -338,7 +374,7 @@ const Header = () => {
                     {showNotifications && (
                       <div
                         ref={notificationRef}
-                        className="absolute right-30 mt-10 w-72 bg-white shadow-lg rounded-md border border-gray-200 z-100"
+                        className="absolute right-30 mt-10 w-72 bg-white shadow-lg rounded-md border border-gray-200 z-40"
                       >
                         <div className="p-4 text-sm text-gray-700">
                           <p className="font-semibold mb-2">Notifications</p>
@@ -405,7 +441,7 @@ const Header = () => {
                       {/* {user?.fname || user?.email} */}
                     </span>
 
-                    <div className="relative z-[1050]" ref={profileDropdownRef}>
+                    <div className="relative" ref={profileDropdownRef}>
                       {/* <img
                         src={profile}
                         alt="Profile"
@@ -429,7 +465,7 @@ const Header = () => {
                         />
                       </div>
                       {showDropdown && (
-                        <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-50">
+                        <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-40">
                           <ul className="py-2 text-sm text-gray-700">
                             <li>
                               <button
@@ -513,7 +549,7 @@ const Header = () => {
                     {showNotifications && (
                       <div
                         ref={notificationRef}
-                        className="absolute right-0 mt-2 w-72 bg-white shadow-lg rounded-md border border-gray-200 z-50"
+                        className="absolute right-0 mt-2 w-72 bg-white shadow-lg rounded-md border border-gray-200 z-40"
                       >
                         <div className="p-4 text-sm text-gray-700">
                           <p className="font-semibold mb-2">Notifications</p>
@@ -731,6 +767,34 @@ const Header = () => {
           </>
         )}
       </div>
+      {/* Logout Error Modal (portaled) */}
+      {logoutError &&
+        createPortal(
+          <div className="fixed inset-0 bg-white/20 backdrop-blur-md bg-opacity-50 flex items-center justify-center z-[2000]" role="alertdialog" aria-modal="true">
+            <div className="bg-white rounded-[20px] p-6 shadow-lg max-w-sm w-[92%] sm:w-full relative">
+              <button
+                type="button"
+                onClick={() => setLogoutError("")}
+                className="p-1 rounded-full hover:bg-gray-100 text-gray-500 absolute top-3 right-3"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <h3 className="text-lg font-semibold text-gray-800 pr-8">Logout failed</h3>
+              <p className="text-gray-600 mt-4 whitespace-pre-line">{logoutError}</p>
+              <div className="mt-6 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setLogoutError("")}
+                  className="px-4 py-2 bg-[#55b3f3] text-white rounded-md hover:bg-blue-400 cursor-pointer transition-colors"
+                >
+                  OK
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
     </header>
   );
 };

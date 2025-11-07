@@ -140,17 +140,81 @@ const ContractManagement = () => {
                 : await getClientContracts();
             setContracts(list || []);
           } catch (error) {
-            console.log("Failed to refresh contracts:", error);
+            console.error("Failed to refresh contracts:", error);
           }
         };
-        [
-          "contract:created",
-          "contract:updated",
-          "contract:feedback",
-          // Ensure UI refreshes when either party submits a review
-          "contract:review_submitted",
-        ].forEach((ev) => {
-          socketRef.current.on(ev, refreshContracts);
+        // Map statuses to friendly notifications
+        const notifyForStatus = (status) => {
+          const role = (user?.userType || "").toLowerCase();
+          const s = String(status || "").toLowerCase();
+          switch (s) {
+            case "active":
+              return {
+                type: "info",
+                title: "Contract Active",
+                message: "A contract is now active.",
+              };
+            case "in_progress":
+              return role === "client"
+                ? {
+                    type: "info",
+                    title: "Work Started",
+                    message:
+                      "The worker has started working on your contract.",
+                  }
+                : {
+                    type: "info",
+                    title: "Work Started",
+                    message:
+                      "You can now continue working on this contract.",
+                  };
+            case "awaiting_client_confirmation":
+              return role === "client"
+                ? {
+                    type: "info",
+                    title: "Review Required",
+                    message:
+                      "The worker marked work as completed. Please confirm completion.",
+                  }
+                : {
+                    type: "info",
+                    title: "Waiting for Confirmation",
+                    message:
+                      "Work marked as completed. Waiting for client confirmation.",
+                  };
+            case "completed":
+              return {
+                type: "success",
+                title: "Contract Completed",
+                message: "Work completion confirmed.",
+              };
+            case "cancelled":
+              return {
+                type: "warning",
+                title: "Contract Cancelled",
+                message: "This contract has been cancelled.",
+              };
+            default:
+              return {
+                type: "info",
+                title: "Contract Updated",
+                message: "A contract was updated.",
+              };
+          }
+        };
+
+        // Listen for contract lifecycle events; only refresh the list
+        socketRef.current.on("contract:created", async () => {
+          try { await refreshContracts(); } catch (_) {}
+        });
+
+        socketRef.current.on("contract:updated", async () => {
+          try { await refreshContracts(); } catch (_) {}
+        });
+
+        // Note: backend emits `contract:review_submitted` when a review is added
+        socketRef.current.on("contract:review_submitted", async () => {
+          try { await refreshContracts(); } catch (_) {}
         });
       }
 
@@ -160,8 +224,7 @@ const ContractManagement = () => {
           ? await getWorkerContracts()
           : await getClientContracts();
 
-      console.log("Contracts loaded:", contractsRes);
-      console.log("Current user:", user);
+        // Debug logs removed
       setContracts(contractsRes || []);
     } catch (error) {
       console.error("Failed to load contracts:", error);
@@ -175,20 +238,20 @@ const ContractManagement = () => {
       try {
         socketRef.current?.disconnect();
       } catch (error) {
-        console.log("Socket disconnect error:", error);
+          console.error("Socket disconnect error:", error);
       }
     };
   }, []);
 
   const handleStartWork = async (contractId) => {
     try {
-      console.log("Attempting to start work for contract:", contractId);
+        // Debug logs removed
       setActionLoading((prev) => ({
         ...prev,
         [contractId]: { ...(prev[contractId] || {}), starting: true },
       }));
       const result = await startWork(contractId);
-      console.log("Start work result:", result);
+        // Debug logs removed
       showNotification(
         "success",
         "Work Started",
@@ -212,13 +275,13 @@ const ContractManagement = () => {
 
   const handleCompleteWork = async (contractId) => {
     try {
-      console.log("Attempting to complete work for contract:", contractId);
+        // Debug logs removed
       setActionLoading((prev) => ({
         ...prev,
         [contractId]: { ...(prev[contractId] || {}), completing: true },
       }));
       const result = await completeWork(contractId);
-      console.log("Complete work result:", result);
+        // Debug logs removed
       showNotification(
         "success",
         "Work Completed",
@@ -279,15 +342,7 @@ const ContractManagement = () => {
         return;
       }
 
-      console.log(
-        "Submitting feedback for contract:",
-        feedbackModal.contract._id
-      );
-      console.log("Contract status:", feedbackModal.contract.contractStatus);
-      console.log("Feedback data:", {
-        rating: feedback.rating,
-        feedback: feedback.comment,
-      });
+        // Debug logs removed
       setSubmittingFeedback(true);
       await submitFeedback(feedbackModal.contract._id, {
         rating: feedback.rating,
@@ -371,7 +426,7 @@ const ContractManagement = () => {
         });
       } catch (error) {
         // non-fatal; ChatPage can still create lazily
-        console.log(
+        console.warn(
           "Conversation creation failed, will create lazily:",
           error.message
         );
@@ -750,7 +805,7 @@ const ContractManagement = () => {
 
         {/* Feedback Modal */}
         {feedbackModal.show && (
-          <div className="fixed inset-0 bg-[#f4f6f6]/70 flex items-center justify-center z-50">
+          <div className="fixed inset-0 bg-[#f4f6f6]/70 flex items-center justify-center z-[2000]">
             <div className="bg-white rounded-xl p-6 w-[90%] max-w-md mx-auto shadow-xl">
               <h3 className="text-lg font-semibold mb-4 text-center text-gray-800">
                 Submit Feedback

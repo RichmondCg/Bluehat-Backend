@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import {
   MapPin,
   Briefcase,
@@ -43,6 +44,16 @@ const FindWork = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [showPortfolioSetup, setShowPortfolioSetup] = useState(false);
+  const [portfolioSetupCompleted, setPortfolioSetupCompleted] = useState({
+    profilePhoto: false,
+    biography: false,
+    portfolio: false,
+    certificates: false,
+    experience: false,
+    education: false,
+    skills: false,
+  });
+  const [portfolioSetupInitialStep, setPortfolioSetupInitialStep] = useState(1);
 
   const [loading, setLoading] = useState(true);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
@@ -254,28 +265,41 @@ const FindWork = () => {
   // Handle posting a new job
   const handlePostJob = async (e) => {
     e.preventDefault();
-    if (!newJob.description || !newJob.location || !newJob.priceOffer) {
+
+    // Client-side validation aligned with backend rules (Joi):
+    const errs = [];
+    const desc = (newJob.description || '').trim();
+    const loc = (newJob.location || '').trim();
+    const priceNum = Number(newJob.priceOffer);
+
+    if (!desc) errs.push("Description is required.");
+    if (desc && desc.length < 20) errs.push("Description must be at least 20 characters.");
+
+    if (!loc) errs.push("Location is required.");
+    if (loc && loc.length < 2) errs.push("Location must be at least 2 characters.");
+
+    if (!selectedCategory) errs.push("Category is required.");
+
+    if (newJob.priceOffer === '' || newJob.priceOffer === null || Number.isNaN(priceNum)) {
+      errs.push("Price is required and must be a valid number.");
+    } else if (priceNum < 0) {
+      errs.push("Price cannot be negative.");
+    }
+
+    if (errs.length) {
       setAlertModal({
         open: true,
-        title: "Complete required fields",
-        message:
-          "Please fill out all required fields",
+        title: "Validation failed",
+        message: errs.map((m) => `• ${m}`).join("\n"),
       });
       return;
     }
-    if (!selectedCategory) {
-      setAlertModal({
-        open: true,
-        title: "Select a category",
-        message: "Please select a category for your job post.",
-      });
-      return;
-    }
+
     try {
       const jobData = {
-        description: newJob.description,
-        location: newJob.location,
-        price: parseFloat(newJob.priceOffer),
+        description: desc,
+        location: loc,
+        price: priceNum,
         category: selectedCategory,
       };
 
@@ -291,10 +315,31 @@ const FindWork = () => {
       setTimeout(() => setShowSuccess(false), 3000);
     } catch (error) {
       console.error("Error posting job:", error);
+      const data = error?.response?.data;
+      let title = data?.code === 'VALIDATION_ERROR' ? 'Validation failed' : 'Failed to post job';
+      let details = [];
+
+      if (data?.code === 'VALIDATION_ERROR' && Array.isArray(data?.errors)) {
+        details = data.errors.map((e) => `• ${e.field}: ${e.message}`);
+      } else if (data?.code === 'INAPPROPRIATE_CONTENT') {
+        const reason = data?.reason ? `\nReason: ${data.reason}` : '';
+        details = [
+          `• ${data?.message || 'Content does not meet our community guidelines.'}${reason}`,
+        ];
+      } else if (typeof data?.message === 'string') {
+        details = [
+          `• ${data.message}`,
+        ];
+      } else {
+        details = [
+          '• Something went wrong while posting your job. Please try again.',
+        ];
+      }
+
       setAlertModal({
         open: true,
-        title: "Failed to post job",
-        message: error.response?.data?.message || "Something went wrong while posting your job. Please try again.",
+        title,
+        message: details.join('\n'),
       });
     }
   };
@@ -327,6 +372,32 @@ const FindWork = () => {
           const education = Array.isArray(userData.education)
             ? userData.education
             : [];
+
+          const hasProfilePhoto = Boolean(userData?.image);
+          const completedFlags = {
+            profilePhoto: hasProfilePhoto,
+            biography: biography.length > 0,
+            portfolio: portfolios.length > 0,
+            certificates: certificates.length > 0,
+            experience: experiences.length > 0,
+            education: education.length > 0,
+            skills: skills.length > 0,
+          };
+
+          setPortfolioSetupCompleted(completedFlags);
+
+          // determine first incomplete step order: 1 photo, 2 bio, 3 portfolio, 4 certificates, 5 experience, 6 education, 7 skills
+          const stepOrder = [
+            { key: "profilePhoto", step: 1 },
+            { key: "biography", step: 2 },
+            { key: "portfolio", step: 3 },
+            { key: "certificates", step: 4 },
+            { key: "experience", step: 5 },
+            { key: "education", step: 6 },
+            { key: "skills", step: 7 },
+          ];
+          const firstIncomplete = stepOrder.find(({ key }) => !completedFlags[key]);
+          setPortfolioSetupInitialStep(firstIncomplete ? firstIncomplete.step : 7);
 
           const shouldShowModal =
             portfolios.length === 0 ||
@@ -458,7 +529,7 @@ const FindWork = () => {
   }
 
   return (
-    <div className="max-w-5xl mx-auto p-4 md:p-0 mt-25 md:mt-35">
+    <div className="max-w-5xl mx-auto p-4 md:p-0 mt-25 md:mt-35 animate-fade-in">
 
       <VerificationNotice user={user} />
 
@@ -509,7 +580,7 @@ const FindWork = () => {
 
           {/* Desktop filters dropdown popover */}
           {showDesktopFilters && (
-            <div className="hidden md:block absolute right-0 top-full mt-2 w-80 bg-white shadow-lg rounded-lg p-3 z-20">
+            <div className="hidden md:block absolute right-0 top-full mt-2 w-80 bg-white shadow-lg rounded-lg p-3 z-20 animate-scale-in">
               {/* Location */}
               <div className="flex items-stretch gap-2 mb-3">
                 <input
@@ -584,107 +655,100 @@ const FindWork = () => {
         {/* Desktop: toggle handled inside search bar; no inline button here */}
       </div>
 
-      {/* Mobile filters modal */}
-      {showMobileFilters && (
-        <div className="fixed inset-0 z-40 md:hidden">
-          {/* Backdrop */}
-          <div
-            className="absolute inset-0 bg-black/40"
-            onClick={() => setShowMobileFilters(false)}
-            aria-hidden="true"
-          />
-          {/* Bottom sheet panel */}
-          <div className="absolute inset-x-0 bottom-0 bg-white rounded-t-2xl p-4 shadow-2xl max-h-[80vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-base font-semibold text-gray-800">Filters</h3>
-              <button
-                type="button"
-                onClick={() => setShowMobileFilters(false)}
-                className="p-2 rounded-full hover:bg-gray-100"
-                aria-label="Close filters"
-              >
-                <X className="w-5 h-5" />
-              </button>
+      {/* Mobile filters modal (portaled) */}
+      {showMobileFilters &&
+        createPortal(
+          <div className="fixed inset-0 z-[2000] md:hidden" role="dialog" aria-modal="true">
+            {/* Backdrop */}
+            <div
+              className="absolute inset-0 bg-black/40 animate-fade-in"
+              onClick={() => setShowMobileFilters(false)}
+              aria-hidden="true"
+            />
+            {/* Bottom sheet panel */}
+            <div className="absolute inset-x-0 bottom-0 bg-white rounded-t-2xl p-4 shadow-2xl max-h-[80vh] overflow-y-auto animate-slide-up">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-base font-semibold text-gray-800">Filters</h3>
+                <button
+                  type="button"
+                  onClick={() => setShowMobileFilters(false)}
+                  className="p-2 rounded-full hover:bg-gray-100"
+                  aria-label="Close filters"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              {/* Location */}
+              <div className="flex items-stretch gap-2 mb-3">
+                <input
+                  type="text"
+                  placeholder="Filter by location"
+                  value={locationInput}
+                  onChange={(e) => setLocationInput(e.target.value)}
+                  onKeyDown={handleLocationKeyPress}
+                  className="flex-1 px-3 py-2 shadow rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
+                />
+                <button
+                  type="button"
+                  onClick={() => setLocation(locationInput.trim())}
+                  className="shrink-0 px-3 py-2 rounded-md bg-[#55b3f3] text-white text-sm hover:bg-blue-400 cursor-pointer"
+                >
+                  Apply
+                </button>
+              </div>
+              {/* Category */}
+              <div className="mb-3">
+                <select
+                  value={filterCategory}
+                  onChange={(e) => setFilterCategory(e.target.value)}
+                  className="w-full px-3 py-2 shadow rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                >
+                  <option value="">All categories</option>
+                  {categories.map((cat) => (
+                    <option key={cat._id} value={cat._id}>
+                      {cat.categoryName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {/* Sorting */}
+              <div className="flex gap-3 flex-wrap mb-3">
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="px-3 py-2 shadow rounded-md bg-white text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 flex-1"
+                >
+                  <option value="createdAt">Date Posted</option>
+                  <option value="price">Price</option>
+                  <option value="updatedAt">Last Updated</option>
+                </select>
+                <select
+                  value={order}
+                  onChange={(e) => setOrder(e.target.value)}
+                  className="px-3 py-2 shadow rounded-md bg-white text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                >
+                  <option value="desc">Descending</option>
+                  <option value="asc">Ascending</option>
+                </select>
+              </div>
+              {(filterCategory || location || sortBy !== "createdAt" || order !== "desc") && (
+                <button
+                  onClick={() => {
+                    setFilterCategory("");
+                    setLocation("");
+                    setSearch("");
+                    setSortBy("createdAt");
+                    setOrder("desc");
+                  }}
+                  className="text-sm text-[#55b3f3] hover:text-sky-700 hover:underline"
+                >
+                  Clear all filters
+                </button>
+              )}
             </div>
-            {/* Location */}
-            <div className="flex items-stretch gap-2 mb-3">
-              <input
-                type="text"
-                placeholder="Filter by location"
-                value={locationInput}
-                onChange={(e) => setLocationInput(e.target.value)}
-                onKeyDown={handleLocationKeyPress}
-                className="flex-1 px-3 py-2 shadow rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
-              />
-              <button
-                type="button"
-                onClick={() => setLocation(locationInput.trim())}
-                className="shrink-0 px-3 py-2 rounded-md bg-[#55b3f3] text-white text-sm hover:bg-blue-400 cursor-pointer"
-              >
-                Apply
-              </button>
-            </div>
-            {/* Category */}
-            <div className="mb-3">
-              <select
-                value={filterCategory}
-                onChange={(e) => setFilterCategory(e.target.value)}
-                className="w-full px-3 py-2 shadow rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
-              >
-                <option value="">All categories</option>
-                {categories.map((cat) => (
-                  <option key={cat._id} value={cat._id}>
-                    {cat.categoryName}
-                  </option>
-                ))}
-              </select>
-            </div>
-            {/* Sorting */}
-            <div className="flex gap-3 flex-wrap mb-3">
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="px-3 py-2 shadow rounded-md bg-white text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 flex-1"
-              >
-                <option value="createdAt">Date Posted</option>
-                <option value="price">Price</option>
-                <option value="updatedAt">Last Updated</option>
-              </select>
-              <select
-                value={order}
-                onChange={(e) => setOrder(e.target.value)}
-                className="px-3 py-2 shadow rounded-md bg-white text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-              >
-                <option value="desc">Descending</option>
-                <option value="asc">Ascending</option>
-              </select>
-            </div>
-            {(filterCategory || location || sortBy !== "createdAt" || order !== "desc") && (
-              <button
-                onClick={() => {
-                  setFilterCategory("");
-                  setLocation("");
-                  setSearch("");
-                  setSortBy("createdAt");
-                  setOrder("desc");
-                }}
-                className="text-sm text-[#55b3f3] hover:text-sky-700 hover:underline"
-              >
-                Clear all filters
-              </button>
-            )}
-            {/* <div className="mt-4 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setShowMobileFilters(false)}
-                className="px-4 py-2 bg-[#55b3f3] text-white rounded-md hover:bg-blue-400"
-              >
-                Done
-              </button>
-            </div> */}
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
 
       {/* Post Box */}
       {user?.userType === "client" && (
@@ -706,10 +770,11 @@ const FindWork = () => {
         </div>
       )}
 
-      {/* Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-white/20 backdrop-blur-md bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg w-full max-w-2xl p-6 shadow-lg relative">
+      {/* Modal (portaled) */}
+      {isModalOpen &&
+        createPortal(
+          <div className="fixed inset-0 bg-white/20 backdrop-blur-md bg-opacity-50 flex items-center justify-center z-[2000]" role="dialog" aria-modal="true">
+            <div className="bg-white rounded-lg w-full max-w-2xl p-6 shadow-lg relative">
             {/* CHANGED: Close uses draft check */}
             <button
               onClick={handleCloseModal}
@@ -800,7 +865,7 @@ const FindWork = () => {
                 >
                   <option value="">Select a category</option>
                   {categories.map((cat) => (
-                    <option key={cat._id} value={cat._id}>
+                    <option key={cat._id} value={cat._id} className="text-black">
                       {cat.categoryName}
                     </option>
                   ))}
@@ -824,79 +889,88 @@ const FindWork = () => {
                 Post Job
               </button>
             </form>
-          </div>
-        </div>
-      )}
+            </div>
+          </div>,
+          document.body
+        )}
 
-      {/* Draft confirmation modal */}
-      {showDraftConfirm && (
-        <div className="fixed inset-0 flex items-center justify-center bg-white/20 backdrop-blur-md bg-opacity-40 z-50">
-          <div className="bg-white rounded-[20px] p-6 shadow-lg max-w-sm w-full text-center">
-            <h3 className="text-lg font-semibold mb-4">Save draft</h3>
-            <p className="text-gray-600 mb-6">
-              You have unsaved input. Do you want to save it as a draft or
-              discard it?
-            </p>
-            <div className="flex justify-center gap-3">
-              <button
-                onClick={handleDiscardDraft}
-                className="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300 cursor-pointer transition-colors"
-              >
-                Discard
-              </button>
-              <button
-                onClick={handleSaveDraft}
-                className="px-4 py-2 bg-[#55b3f3] text-white rounded-md hover:bg-sky-600 cursor-pointer transition-colors"
-              >
-                Save Draft
-              </button>
+      {/* Draft confirmation modal (portaled) */}
+      {showDraftConfirm &&
+        createPortal(
+          <div className="fixed inset-0 flex items-center justify-center bg-white/20 backdrop-blur-md bg-opacity-40 z-[2000]" role="dialog" aria-modal="true">
+            <div className="bg-white rounded-[20px] p-6 shadow-lg max-w-sm w-full text-center">
+              <h3 className="text-lg font-semibold mb-4">Save draft</h3>
+              <p className="text-gray-600 mb-6">
+                You have unsaved input. Do you want to save it as a draft or
+                discard it?
+              </p>
+              <div className="flex justify-center gap-3">
+                <button
+                  onClick={handleDiscardDraft}
+                  className="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300 cursor-pointer transition-colors"
+                >
+                  Discard
+                </button>
+                <button
+                  onClick={handleSaveDraft}
+                  className="px-4 py-2 bg-[#55b3f3] text-white rounded-md hover:bg-sky-600 cursor-pointer transition-colors"
+                >
+                  Save Draft
+                </button>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
 
-      {/* Validation/Alert Modal */}
-      {alertModal.open && (
-        <div className="fixed inset-0 flex items-center justify-center bg-white/20 backdrop-blur-md bg-opacity-40 z-50">
-          <div className="bg-white rounded-[20px] p-6 shadow-lg max-w-sm w-[92%] sm:w-full">
-            <div className="flex items-start justify-between gap-4">
-              <h3 className="text-lg font-semibold text-gray-800">
-                {alertModal.title || "Notice"}
-              </h3>
-              <button
-                type="button"
-                onClick={() => setAlertModal({ open: false, title: "", message: "" })}
-                className="p-1 rounded-full hover:bg-gray-100 text-gray-500"
-                aria-label="Close"
-              >
-                <X className="w-5 h-5" />
-              </button>
+      {/* Validation/Alert Modal (portaled) */}
+      {alertModal.open &&
+        createPortal(
+          <div className="fixed inset-0 flex items-center justify-center bg-white/20 backdrop-blur-md bg-opacity-40 z-[2000]" role="dialog" aria-modal="true">
+            <div className="bg-white rounded-[20px] p-6 shadow-lg max-w-sm w-[92%] sm:w-full">
+              <div className="flex items-start justify-between gap-4">
+                <h3 className="text-lg font-semibold text-gray-800">
+                  {alertModal.title || "Notice"}
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setAlertModal({ open: false, title: "", message: "" })}
+                  className="p-1 rounded-full hover:bg-gray-100 text-gray-500"
+                  aria-label="Close"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <p className="text-gray-600 mt-10 whitespace-pre-line">{alertModal.message}</p>
+              <div className="mt-6 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setAlertModal({ open: false, title: "", message: "" })}
+                  className="px-4 py-2 bg-[#55b3f3] text-white rounded-md hover:bg-blue-400 cursor-pointer transition-colors"
+                >
+                  OK
+                </button>
+              </div>
             </div>
-            <p className="text-gray-600 mt-10 whitespace-pre-line">{alertModal.message}</p>
-            <div className="mt-6 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setAlertModal({ open: false, title: "", message: "" })}
-                className="px-4 py-2 bg-[#55b3f3] text-white rounded-md hover:bg-blue-400 cursor-pointer transition-colors"
-              >
-                OK
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
 
       {/* ID Setup Modal */}
       {showIdSetup && <IDSetup onClose={() => setShowIdSetup(false)} />}
 
       {/* Show Portfolio Setup */}
       {showPortfolioSetup && (
-        <PortfolioSetup onClose={() => setShowPortfolioSetup(false)} />
+        <PortfolioSetup
+          onClose={() => setShowPortfolioSetup(false)}
+          completed={portfolioSetupCompleted}
+          initialStep={portfolioSetupInitialStep}
+        />
       )}
 
       {/* Success Modal */}
       {showSuccess && (
-        <div className="fixed bottom-6 right-6 bg-[#55b3f3] text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 z-50">
+        <div className="fixed bottom-6 right-6 bg-[#55b3f3] text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 z-50 animate-slide-up">
           <CheckCircle size={20} /> Job posted successfully!
         </div>
       )}
@@ -904,7 +978,7 @@ const FindWork = () => {
       {/* Job Posts Display (inner scroll like FindWorker) */}
       {filteredJobs.length > 0 ? (
         <div ref={listRef} style={{ height: listHeight }} className="custom-scrollbar flex flex-col overflow-y-auto pr-2">
-          <div className="space-y-4 pb-4">
+          <div className="space-y-4 pb-4 stagger-children">
             {filteredJobs.map((job) => {
               const toIdString = (val) => {
                 if (!val) return "";
