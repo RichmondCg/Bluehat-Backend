@@ -472,57 +472,73 @@ const FindWork = () => {
     return (
       <div className="max-w-5xl mx-auto p-4 md:p-0 mt-25 md:mt-35">
         <div className="space-y-4 pb-4 animate-pulse">
-          {/* Search + Filters Skeleton */}
+          {/* Optional verification notice skeleton */}
+          <div className="h-10 bg-white border border-gray-200 rounded-[12px] shadow-sm w-full" />
+
+          {/* Search + Filters Skeleton (mirror main UI layout) */}
           <div className="relative w-full md:flex-1 mb-2">
-            <div className="w-full h-11 bg-gray-200 rounded-[18px]" />
+            {/* Search input shell */}
+            <div className="w-full h-12 bg-white border border-gray-200 shadow rounded-[18px]" />
+            {/* Left search icon placeholder */}
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 bg-gray-200 rounded" />
+            {/* Desktop Filters button placeholder */}
             <div className="hidden md:block absolute right-2 top-1/2 -translate-y-1/2 h-8 w-24 bg-gray-200 rounded-[14px]" />
+            {/* Mobile Filters button placeholder */}
             <div className="md:hidden absolute right-2 top-1/2 -translate-y-1/2 h-8 w-20 bg-gray-200 rounded-[14px]" />
           </div>
 
-          {/* Post Box Skeleton (client only) */}
+          {/* Post Box Skeleton (client only) to match 'Post a work...' */}
           {user?.userType === "client" && (
             <div className="bg-white shadow rounded-[20px] p-4 mb-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-gray-200" />
-                <div className="flex-1 h-10 bg-gray-100 rounded-full" />
+                <div className="flex-1 h-10 bg-gray-100 rounded-full flex items-center px-4">
+                  <div className="h-3 w-28 bg-gray-200 rounded-full" />
+                </div>
               </div>
             </div>
           )}
 
-          {/* Job Card Skeletons */}
+          {/* Job Card Skeletons (mirror job card UI) */}
           {[1, 2, 3, 4].map((i) => (
             <div key={i} className="rounded-[20px] p-4 bg-white shadow-sm">
-              {/* Header: avatar + name/time + date */}
-              <div className="flex justify-between items-center mb-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-gray-200" />
-                  <div className="flex flex-col gap-1">
-                    <div className="h-4 bg-gray-200 rounded w-32" />
-                    <div className="h-3 bg-gray-200 rounded w-20" />
+              <div className="rounded-xl p-2 bg-white">
+                {/* Header: avatar + name + date */}
+                <div className="flex justify-between items-center mb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-gray-200" />
+                    <div className="flex flex-col gap-1">
+                      <div className="h-4 bg-gray-200 rounded w-32" />
+                    </div>
                   </div>
+                  <div className="h-4 bg-gray-200 rounded w-20" />
                 </div>
-                <div className="h-4 bg-gray-200 rounded w-16" />
-              </div>
 
-              {/* Description line */}
-              <div className="h-5 bg-gray-200 rounded w-3/4 mb-3" />
-
-              {/* Category chips */}
-              <div className="flex gap-2 mt-2">
-                <div className="h-6 bg-gray-200 rounded-full w-24" />
-                <div className="h-6 bg-gray-200 rounded-full w-20" />
-              </div>
-
-              {/* Footer: location + price */}
-              <div className="flex justify-between items-center mt-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 bg-gray-200 rounded" />
-                  <div className="h-4 bg-gray-200 rounded w-40" />
+                {/* Description line with icon placeholder */}
+                <div className="flex items-center gap-2 mt-1">
+                  <div className="w-5 h-5 bg-gray-200 rounded" />
+                  <div className="h-5 bg-gray-200 rounded w-3/4" />
                 </div>
-                <div className="h-4 bg-gray-200 rounded w-16" />
+
+                {/* Category chip (single like real UI) */}
+                <div className="flex gap-2 mt-3">
+                  <div className="h-6 bg-gray-200 rounded-md w-28" />
+                </div>
+
+                {/* Footer: location + price */}
+                <div className="flex justify-between items-center mt-4 text-sm">
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-gray-200 rounded" />
+                    <div className="h-4 bg-gray-200 rounded w-44" />
+                  </div>
+                  <div className="h-4 bg-gray-200 rounded w-16" />
+                </div>
               </div>
             </div>
           ))}
+
+          {/* Load more button skeleton */}
+          <div className="mx-auto h-10 w-36 bg-white border border-gray-200 rounded-md shadow" />
         </div>
       </div>
     );
@@ -554,7 +570,7 @@ const FindWork = () => {
             Search
           </button> */}
 
-          {/* Mobile filters trigger next to Search (inline) */}
+          {/* Mobile filters trigger next to Search*/}
           <button
             type="button"
             onClick={() => setShowMobileFilters(true)}
@@ -775,120 +791,120 @@ const FindWork = () => {
         createPortal(
           <div className="fixed inset-0 bg-white/20 backdrop-blur-md bg-opacity-50 flex items-center justify-center z-[2000]" role="dialog" aria-modal="true">
             <div className="bg-white rounded-lg w-full max-w-2xl p-6 shadow-lg relative">
-            {/* CHANGED: Close uses draft check */}
-            <button
-              onClick={handleCloseModal}
-              className="absolute top-1 right-3 text-gray-500 hover:text-gray-700 cursor-pointer"
-            >
-              <X size={20} />
-            </button>
+              {/* CHANGED: Close uses draft check */}
+              <button
+                onClick={handleCloseModal}
+                className="absolute top-1 right-3 text-gray-500 hover:text-gray-700 cursor-pointer"
+              >
+                <X size={20} />
+              </button>
 
-            {/* Job Preview: show only after user inputs something; no loading skeleton */}
-            {(newJob.description || newJob.location || selectedCategory || newJob.priceOffer) && (
-              <div className="mt-6 pt-2">
-                <div className="rounded-[20px] p-4 bg-gray-50 shadow-sm mb-4">
-                  <div className="flex justify-between items-center mb-2">
-                    <div className="flex items-center gap-2">
-                      <img
-                        src={user?.image || currentUser.avatar}
-                        alt="Avatar"
-                        className="w-8 h-8 rounded-full object-cover"
-                      />
-                      <span className="text-md font-semibold text-[#252525]">
-                        {user?.fullName || "Client Name"}
+              {/* Job Preview: show only after user inputs something; no loading skeleton */}
+              {(newJob.description || newJob.location || selectedCategory || newJob.priceOffer) && (
+                <div className="mt-6 pt-2">
+                  <div className="rounded-[20px] p-4 bg-gray-50 shadow-sm mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <div className="flex items-center gap-2">
+                        <img
+                          src={user?.image || currentUser.avatar}
+                          alt="Avatar"
+                          className="w-8 h-8 rounded-full object-cover"
+                        />
+                        <span className="text-md font-semibold text-[#252525]">
+                          {user?.fullName || "Client Name"}
+                        </span>
+                      </div>
+                      <span className="flex items-center gap-1 text-sm text-[#252525] opacity-80">
+                        {/* <Clock size={16} /> Just now */}
                       </span>
                     </div>
-                    <span className="flex items-center gap-1 text-sm text-[#252525] opacity-80">
-                      {/* <Clock size={16} /> Just now */}
-                    </span>
-                  </div>
-                  <p className="text-gray-700 mt-1 text-left flex items-center gap-2">
-                    <span className="flex items-center justify-center w-5 h-5">
-                      <Briefcase size={20} className="text-[#55B2F3]" />
-                    </span>
-                    <span className="line-clamp-1 md:text-base">
-                      {newJob.description}
-                    </span>
-                  </p>
-                  <div className="flex flex-wrap gap-2 mt-3">
-                    {selectedCategory ? (
-                      <span className="bg-[#55B2F3]/90 text-white font-medium backdrop-blur-sm px-2.5 py-1 rounded-md text-sm">
-                        {categories.find((c) => c._id === selectedCategory)?.categoryName}
+                    <p className="text-gray-700 mt-1 text-left flex items-center gap-2">
+                      <span className="flex items-center justify-center w-5 h-5">
+                        <Briefcase size={20} className="text-[#55B2F3]" />
                       </span>
-                    ) : (
-                      <span className="text-gray-400 text-sm">No category selected</span>
-                    )}
-                  </div>
-                  <div className="flex justify-between items-center mt-4 text-sm text-gray-600 ">
-                    <span className="flex items-center gap-1">
-                      <MapPin size={16} />
-                      <span className="truncate overflow-hidden max-w-45 md:max-w-full md:text-base text-gray-500">
-                        {newJob.location}
+                      <span className="line-clamp-1 md:text-base">
+                        {newJob.description}
                       </span>
-                    </span>
-                    <span className="font-bold text-green-400">
-                      {newJob.priceOffer ? `₱${parseFloat(newJob.priceOffer).toLocaleString()}` : "₱0"}
-                    </span>
+                    </p>
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {selectedCategory ? (
+                        <span className="bg-[#55B2F3]/90 text-white font-medium backdrop-blur-sm px-2.5 py-1 rounded-md text-sm">
+                          {categories.find((c) => c._id === selectedCategory)?.categoryName}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400 text-sm">No category selected</span>
+                      )}
+                    </div>
+                    <div className="flex justify-between items-center mt-4 text-sm text-gray-600 ">
+                      <span className="flex items-center gap-1">
+                        <MapPin size={16} />
+                        <span className="truncate overflow-hidden max-w-45 md:max-w-full md:text-base text-gray-500">
+                          {newJob.location}
+                        </span>
+                      </span>
+                      <span className="font-bold text-green-400">
+                        {newJob.priceOffer ? `₱${parseFloat(newJob.priceOffer).toLocaleString()}` : "₱0"}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Job Creation Form */}
-            <form onSubmit={handlePostJob} className="space-y-3">
-              <textarea
-                placeholder="Job description"
-                value={newJob.description}
-                onChange={(e) =>
-                  setNewJob({ ...newJob, description: e.target.value })
-                }
-                className="px-4 py-2 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full"
-                rows="3"
-              />
-              <label className="block text-sm font-medium text-gray-500 mb-1 text-left">
-                Address
-              </label>
-              <AddressInput
-                value={newJob.location}
-                onChange={(address) =>
-                  setNewJob({ ...newJob, location: address })
-                }
-              />
-              <div>
+              {/* Job Creation Form */}
+              <form onSubmit={handlePostJob} className="space-y-3">
+                <textarea
+                  placeholder="Job description"
+                  value={newJob.description}
+                  onChange={(e) =>
+                    setNewJob({ ...newJob, description: e.target.value })
+                  }
+                  className="px-4 py-2 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full"
+                  rows="3"
+                />
                 <label className="block text-sm font-medium text-gray-500 mb-1 text-left">
-                  Category
+                  Address
                 </label>
-                <select
-                  value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="px-3 py-2 bg-gray-50 border border-gray-300 text-gray-500 text-sm rounded-lg block w-full"
+                <AddressInput
+                  value={newJob.location}
+                  onChange={(address) =>
+                    setNewJob({ ...newJob, location: address })
+                  }
+                />
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 mb-1 text-left">
+                    Category
+                  </label>
+                  <select
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    className="px-3 py-2 bg-gray-50 border border-gray-300 text-gray-500 text-sm rounded-lg block w-full"
+                  >
+                    <option value="">Select a category</option>
+                    {categories.map((cat) => (
+                      <option key={cat._id} value={cat._id} className="text-black">
+                        {cat.categoryName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <input
+                  type="number"
+                  placeholder="Price offer (₱)"
+                  value={newJob.priceOffer}
+                  onChange={(e) =>
+                    setNewJob({ ...newJob, priceOffer: e.target.value })
+                  }
+                  className="w-full px-4 py-2 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block"
+                  min="0"
+                  step="0.01"
+                />
+                <button
+                  type="submit"
+                  className="w-full px-4 py-2 bg-[#55b3f3] text-white rounded-md hover:bg-blue-400 cursor-pointer transition-colors"
                 >
-                  <option value="">Select a category</option>
-                  {categories.map((cat) => (
-                    <option key={cat._id} value={cat._id} className="text-black">
-                      {cat.categoryName}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <input
-                type="number"
-                placeholder="Price offer (₱)"
-                value={newJob.priceOffer}
-                onChange={(e) =>
-                  setNewJob({ ...newJob, priceOffer: e.target.value })
-                }
-                className="w-full px-4 py-2 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block"
-                min="0"
-                step="0.01"
-              />
-              <button
-                type="submit"
-                className="w-full px-4 py-2 bg-[#55b3f3] text-white rounded-md hover:bg-blue-400 cursor-pointer transition-colors"
-              >
-                Post Job
-              </button>
-            </form>
+                  Post Job
+                </button>
+              </form>
             </div>
           </div>,
           document.body
@@ -1048,11 +1064,12 @@ const FindWork = () => {
                         <button
                           type="button"
                           onClick={(e) => {
+                            if (!user) return; // Not logged in: allow card click to proceed
                             e.stopPropagation();
                             if (clientProfileId) navigate(`/client/${clientProfileId}`);
                           }}
-                          className="focus:outline-none"
-                          title="View client profile"
+                          className={`focus:outline-none ${user ? '' : 'cursor-default'}`}
+                          title={user ? "View client profile" : "Log in to view profile"}
                         >
                           <img
                             src={
@@ -1060,7 +1077,7 @@ const FindWork = () => {
                               currentUser.avatar
                             }
                             alt="Client Avatar"
-                            className="w-8 h-8 rounded-full object-cover cursor-pointer"
+                            className={`w-8 h-8 rounded-full object-cover ${user ? 'cursor-pointer' : 'cursor-default'}`}
                           />
                         </button>
                         <div className="flex flex-col">
