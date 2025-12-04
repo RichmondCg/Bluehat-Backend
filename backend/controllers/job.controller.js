@@ -707,7 +707,7 @@ const postJob = async (req, res) => {
   const startTime = Date.now();
 
   try {
-    // ✅ Verify user authentication and type
+    // Verify user authentication and type
     if (!req.user || req.user.userType !== "client") {
       logger.warn("Non-client attempted to post job", {
         userId: req.user?.id,
@@ -723,7 +723,7 @@ const postJob = async (req, res) => {
       });
     }
 
-    // ✅ Validate input data
+    // Validate input data
     const { error, value } = jobSchema.validate(req.body, {
       abortEarly: false,
       stripUnknown: true,
@@ -748,11 +748,11 @@ const postJob = async (req, res) => {
       });
     }
 
-    // ✅ Sanitize all inputs
+    // Sanitize all inputs
     const sanitizedData = sanitizeInput(value);
     const { description, price, location, category } = sanitizedData;
 
-    // ✅ Check if client is verified and not blocked
+    // Check if client is verified and not blocked
     const clientProfile = await Client.findOne({ credentialId: req.user.id });
     if (!clientProfile) {
       logger.error("Client profile not found for user", {
@@ -799,7 +799,7 @@ const postJob = async (req, res) => {
       });
     }
 
-    // ✅ Content moderation check
+    // Content moderation check
     const contentCheck = isContentAppropriate(description);
     if (!contentCheck.isAppropriate) {
       logger.warn("Inappropriate content detected in job post", {
@@ -818,7 +818,7 @@ const postJob = async (req, res) => {
       });
     }
 
-    // ✅ Validate category exists
+    // Validate category exists
     const categoryExists = await SkillCategory.findById(category);
     if (!categoryExists) {
       logger.warn("Job creation attempted with non-existent category", {
@@ -835,7 +835,7 @@ const postJob = async (req, res) => {
       });
     }
 
-    // ✅ Create job
+    // Create job
     const job = new Job({
       clientId: clientProfile._id,
       description: description.trim(),
@@ -849,7 +849,7 @@ const postJob = async (req, res) => {
 
     await job.save();
 
-    // ✅ Populate job with category info for response
+    // Populate job with category info for response
     await job.populate("category", "categoryName");
 
     const processingTime = Date.now() - startTime;
