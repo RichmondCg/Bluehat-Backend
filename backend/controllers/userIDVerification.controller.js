@@ -35,8 +35,18 @@ const uploadSchema = Joi.object({
     }),
 });
 
-const approveRejectSchema = Joi.object({
+// Approve schema: tolerate unknown fields so stray keys don't fail validation
+const approveSchema = Joi.object({
   requireResubmission: Joi.boolean().default(true),
+}).unknown(true);
+
+// Separate schema for rejection to capture a human-readable reason
+const rejectSchema = Joi.object({
+  requireResubmission: Joi.boolean().default(true),
+  reason: Joi.string().trim().min(1).max(500).required().messages({
+    "any.required": "Rejection reason is required",
+    "string.empty": "Rejection reason cannot be empty",
+  }),
 });
 
 const getPendingSchema = Joi.object({
@@ -746,7 +756,8 @@ const approveVerification = async (req, res) => {
 
   try {
     const { userId } = req.params;
-    const { error, value } = approveRejectSchema.validate(req.body);
+    // Use approveSchema which tolerates unexpected fields (e.g., reason) without requiring them
+    const { error, value } = approveSchema.validate(req.body);
 
     if (error) {
       return res.status(400).json({
@@ -756,7 +767,7 @@ const approveVerification = async (req, res) => {
       });
     }
 
-    const { requireResubmission } = value;
+    const { requireResubmission } = value; // Currently not used, reserved for future logic
 
     // Validate user ID format
     if (!mongoose.Types.ObjectId.isValid(userId)) {
@@ -895,7 +906,8 @@ const rejectVerification = async (req, res) => {
 
   try {
     const { userId } = req.params;
-    const { error, value } = approveRejectSchema.validate(req.body);
+    // Use dedicated rejectSchema so we can reliably capture the rejection reason
+    const { error, value } = rejectSchema.validate(req.body);
 
     if (error) {
       return res.status(400).json({
@@ -905,7 +917,7 @@ const rejectVerification = async (req, res) => {
       });
     }
 
-    const { requireResubmission } = value;
+    const { requireResubmission, reason } = value;
 
     // Validate user ID format
     if (!mongoose.Types.ObjectId.isValid(userId)) {
@@ -992,6 +1004,7 @@ const rejectVerification = async (req, res) => {
       userType: credential.userType,
       email: credential.email,
       rejectedBy: req.admin?.userName || req.admin?.id,
+      reason,
     });
 
     res.status(200).json({
@@ -1008,6 +1021,7 @@ const rejectVerification = async (req, res) => {
         canResubmit: true,
         isVerified: userProfile.isVerified,
         verifiedAt: userProfile.verifiedAt,
+        reason,
       },
     });
   } catch (error) {

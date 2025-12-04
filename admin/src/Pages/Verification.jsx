@@ -89,9 +89,10 @@ const Verification = () => {
 
     try {
       setActionLoading(true);
-      await rejectVerification(selectedWorker._id, reason, true);
+      await rejectVerification(selectedWorker.credentialId, reason, true);
+      // Remove by credentialId for consistency with approve flow
       setPendingVerifications((prev) =>
-        prev.filter((w) => w._id !== selectedWorker._id)
+        prev.filter((w) => w.credentialId !== selectedWorker.credentialId)
       );
       setShowModal(false);
       setShowRejectModal(false);
@@ -100,7 +101,11 @@ const Verification = () => {
       alert("Worker verification rejected!");
     } catch (err) {
       console.error("Error rejecting worker:", err);
-      const msg = err.response?.data?.message || "Error rejecting worker.";
+      const msg =
+        err.response?.data?.errors?.[0] ||
+        err.response?.data?.message ||
+        err.message ||
+        "Error rejecting worker.";
       alert(msg);
     } finally {
       setActionLoading(false);
@@ -327,6 +332,8 @@ const VerificationModal = ({
   onReject,
   onClose,
 }) => {
+  const canReject =
+    !!rejectionReason.trim() && worker?.verificationStatus === "pending";
   return (
   <div className="fixed inset-0 bg-[#f4f6f6] bg-opacity-50 flex items-center justify-center p-4 z-[2000]">
       <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-md">
@@ -409,7 +416,7 @@ const VerificationModal = ({
                 </button>
                 <button
                   onClick={onReject}
-                  disabled={actionLoading}
+                  disabled={actionLoading || !canReject}
                   className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
                 >
                   Confirm Reject

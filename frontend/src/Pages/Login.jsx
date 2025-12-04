@@ -13,6 +13,8 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [otpAttemptsLeft, setOtpAttemptsLeft] = useState(null);
   const [otpRetryAfter, setOtpRetryAfter] = useState(0);
+  // Inline validation state
+  const [errors, setErrors] = useState({ email: "", password: "", otp: "" });
 
   const [showModal, setShowModal] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
@@ -23,14 +25,38 @@ const Login = () => {
 
   const navigate = useNavigate();
 
+  const isValidEmail = (value) => {
+    // Lightweight RFC5322-ish check suitable for UI validation
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+  };
+
   // First step: email + password
   const handleLogin = async (e) => {
     e.preventDefault();
+    // Client-side validation aligned with black-box tests
+    const trimmedEmail = form.email.trim();
+    const trimmedPassword = form.password.trim();
+    const newErrors = { email: "", password: "", otp: "" };
+
+    if (!trimmedEmail) newErrors.email = "Email is required";
+    else if (!isValidEmail(trimmedEmail)) newErrors.email = "Invalid email";
+    if (!trimmedPassword) newErrors.password = "Password is required";
+
+    if (newErrors.email || newErrors.password) {
+      setErrors(newErrors);
+      setErrorMessage(newErrors.email || newErrors.password);
+      setShowErrorModal(true);
+      setTimeout(() => setShowErrorModal(false), 2000);
+      return;
+    } else {
+      setErrors({ email: "", password: "", otp: "" });
+    }
+
     setLoading(true);
     try {
       const trimmedForm = {
-        email: form.email.trim(),
-        password: form.password.trim(),
+        email: trimmedEmail,
+        password: trimmedPassword,
       };
       const res = await login(trimmedForm);
 
@@ -40,6 +66,7 @@ const Login = () => {
         setResendTimer(60);
         setOtpAttemptsLeft(null);
         setOtpRetryAfter(0);
+        setErrors((prev) => ({ ...prev, otp: "" }));
       } else if (res.data.success) {
         setShowModal(true);
         setTimeout(() => {
@@ -61,11 +88,23 @@ const Login = () => {
     e.preventDefault();
     if (!loginData) return;
 
+    // Validate OTP format first (6 digits)
+    const trimmedOtp = otp.trim();
+    if (!/^\d{6}$/.test(trimmedOtp)) {
+      setErrors((prev) => ({ ...prev, otp: "TOTP code must be 6 digits" }));
+      setErrorMessage("TOTP code must be 6 digits");
+      setShowErrorModal(true);
+      setTimeout(() => setShowErrorModal(false), 2000);
+      return;
+    } else {
+      setErrors((prev) => ({ ...prev, otp: "" }));
+    }
+
     setLoading(true);
     try {
       const res = await login({
         ...loginData,
-        totpCode: otp.trim(),
+        totpCode: trimmedOtp,
       });
 
       if (res.data.success) {
@@ -114,6 +153,7 @@ const Login = () => {
     setOtp("");
     setResendTimer(60);
     setLoginData(null);
+    setErrors({ email: "", password: "", otp: "" });
   };
 
   useEffect(() => {
@@ -205,7 +245,9 @@ const Login = () => {
                     className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5 shadow-sm"
                     placeholder="name@gmail.com"
                     required
-                  />
+                    aria-invalid={Boolean(errors.email)}
+                    aria-describedby="email-error"
+                  />            
                 </div>
                 <div className="relative">
                   <label htmlFor="password" className="block mb-2 text-sm font-medium text-gray-900 text-left">
@@ -220,6 +262,8 @@ const Login = () => {
                     placeholder="••••••••"
                     className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5 pr-10 shadow-sm"
                     required
+                    aria-invalid={Boolean(errors.password)}
+                    aria-describedby="password-error"
                   />
                   <button
                     type="button"
@@ -228,6 +272,7 @@ const Login = () => {
                   >
                     {showPassword ? <EyeOff size={19} /> : <Eye size={19} />}
                   </button>
+                
                 </div>
                 <div className="flex items-start">
                   <Link to="/forgetpass" className="ms-auto text-sm font-medium text-[#55b3f3] hover:underline cursor-pointer">
@@ -267,7 +312,12 @@ const Login = () => {
                     className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5 shadow-sm text-center tracking-widest"
                     placeholder="------"
                     required
+                    aria-invalid={Boolean(errors.otp)}
+                    aria-describedby="otp-error"
                   />
+                  {errors.otp && (
+                    <p id="otp-error" className="mt-1 text-xs text-red-600">{errors.otp}</p>
+                  )}
                   {(otpAttemptsLeft !== null || otpRetryAfter > 0) && (
                     <div className="mt-2 text-xs text-gray-600 text-center">
                       {otpRetryAfter > 0 ? (
